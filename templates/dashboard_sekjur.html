@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="https://res.cloudinary.com/dvul7dq3b/image/upload/v1755843240/logowebp_bqssky.webp" />
+    <title>Dashboard Sekjur</title>
+<style>
+    /* Reset dasar */
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        min-height: 100vh; /* Ganti height ke min-height agar bisa scroll */
+        background: url("https://res.cloudinary.com/dvul7dq3b/image/upload/v1757145957/bg_vgrbsv.webp") repeat-y center top / cover;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding: 30px 10px;
+        color: #fff;
+    }
+
+    .overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.6);
+        z-index: 0;
+    }
+
+    .container {
+        position: relative;
+        z-index: 1;
+        max-width: 1000px;
+        width: 100%;
+        background: rgba(10, 25, 47, 0.85);
+        backdrop-filter: blur(6px);
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.25);
+        animation: fadeIn 0.8s ease-in-out;
+    }
+
+    .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    
+    .header .header-actions {
+        display: flex;
+        flex-wrap: wrap; /* Izinkan tombol untuk wrap ke baris baru jika perlu */
+        gap: 10px;
+        justify-content: flex-end; /* Ratakan kanan di desktop */
+    }
+
+    .header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: bold;
+        color: #fff;
+    }
+
+    .header a {
+        text-decoration: none;
+        color: #fff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: transform 0.2s, background 0.3s;
+        display: inline-block;
+    }
+    /* Style tombol header dari kode asli */
+    .header a.btn-danger { background: linear-gradient(135deg, #dc3545, #a71d2a); }
+    .header a.btn-danger:hover { transform: translateY(-2px); background: linear-gradient(135deg, #bb2d3b, #801622); }
+    .header a.btn-primary { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+    .header a.btn-primary:hover { transform: translateY(-2px); }
+    .header a.btn-info { background: linear-gradient(135deg, #0d6efd, #0a58ca); } /* Asumsi sama dengan primary */
+    .header a.btn-info:hover { transform: translateY(-2px); }
+
+
+    .info-box {
+        background: rgba(255,255,255,0.05);
+        border-left: 5px solid #0d6efd;
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+    }
+
+    .info-box p { margin: 6px 0; }
+
+    h2 {
+        margin: 25px 0 10px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        padding-bottom: 6px;
+        font-size: 20px;
+        color: #fff;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-bottom: 20px;
+        color: #fff;
+    }
+
+    th, td {
+        border: 1px solid rgba(255,255,255,0.2);
+        padding: 12px;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    th {
+        background: rgba(255,255,255,0.1);
+        font-weight: 600;
+    }
+
+    tr:nth-child(even) {
+        background: rgba(255,255,255,0.05);
+    }
+
+    .btn {
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: bold;
+        color: #fff;
+        border: none;
+        cursor: pointer;
+        transition: transform 0.2s, opacity 0.3s;
+        text-decoration: none;
+    }
+
+    .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+
+    .btn-info { background: linear-gradient(135deg, #0d6efd, #0a58ca); }
+    .btn-success { background: linear-gradient(135deg, #198754, #0f5132); }
+    .btn-danger { background: linear-gradient(135deg, #dc3545, #a71d2a); }
+
+    /* Status warna */
+    .status-red { background-color: rgba(220,53,69,0.2); color: #ff6b6b; }
+    .status-green { background-color: rgba(25,135,84,0.2); color: #00ffb3; }
+    .status-yellow { background-color: rgba(255,193,7,0.2); color: #ffdd57; }
+
+    /* Modal */
+    .modal-backdrop {
+        position: fixed; top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.7);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 100;
+        padding: 10px;
+    }
+    .modal-content {
+        background: rgba(10,25,47,0.95);
+        padding: 20px;
+        border-radius: 12px;
+        width: 80%;
+        max-width: 800px;
+        max-height: 90vh;
+        overflow-y: auto;
+        color: #fff;
+    }
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+        padding-bottom: 10px;
+        margin-bottom: 15px;
+    }
+     .modal-header h3 { font-size: 18px; }
+    .close-btn {
+        cursor: pointer; border: none; background: none; font-size: 24px; color: #fff; line-height: 1;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(-20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* CSS untuk Ikon Aksi (Preview & Download) */
+    .action-icons { display: flex; gap: 10px; align-items: center; }
+    .btn-icon {
+        display: inline-flex; justify-content: center; align-items: center;
+        width: 36px; height: 36px;
+        background: rgba(255, 255, 255, 0.1); color: #66b2ff;
+        border-radius: 8px; text-decoration: none; transition: background 0.3s, color 0.3s;
+    }
+    .btn-icon:hover { background: rgba(102, 178, 255, 0.2); color: #fff; }
+    
+    /* Cuti summary di dalam modal */
+    .cuti-summary {
+        display: flex; justify-content: space-around; text-align: center; 
+        margin-bottom: 20px; padding: 10px; 
+        background-color: rgba(255,255,255,0.05); border-radius: 8px;
+    }
+    .cuti-summary > div p:first-child { margin: 0; font-size: 12px; color: #adb5bd; }
+    .cuti-summary > div p:last-child { margin: 0; font-size: 18px; font-weight: bold; }
+    .cuti-summary > div:last-child p:last-child { color: #00ffb3; }
+
+    /* =================================================================== */
+    /* ==                     RESPONSIVE STYLES (MOBILE)                == */
+    /* == Aturan ini hanya berlaku jika lebar layar 768px atau kurang   == */
+    /* =================================================================== */
+    @media (max-width: 768px) {
+        body {
+            padding: 15px 5px;
+        }
+
+        .container {
+            padding: 15px;
+        }
+
+        /* --- Header Responsif --- */
+        .header {
+            flex-direction: column;
+            align-items: stretch; /* Tombol dan judul full width */
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 22px;
+            text-align: center; /* Judul di tengah */
+        }
+        
+        .header .header-actions {
+            justify-content: center; /* Pusatkan grup tombol */
+        }
+        
+        /* Buat tombol di header full-width di layar sangat kecil jika diperlukan */
+        @media (max-width: 400px) {
+             .header .header-actions a {
+                 width: 100%;
+                 text-align: center;
+             }
+        }
+
+        /* --- Tabel Responsif Umum (Card Stack Method) --- */
+        /* Berlaku untuk semua tabel di dalam container dan modal */
+        .container table, .modal-content table {
+            border: 0;
+        }
+
+        .container table thead, .modal-content table thead {
+            border: none; clip: rect(0 0 0 0); height: 1px; margin: -1px;
+            overflow: hidden; padding: 0; position: absolute; width: 1px;
+        }
+
+        .container table tr, .modal-content table tr {
+            display: block; margin-bottom: 15px; border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.03);
+        }
+        
+        .container table td, .modal-content table td {
+            display: block; text-align: right; position: relative;
+            padding-left: 50%; border-bottom: 1px dotted rgba(255,255,255,0.1);
+        }
+        
+        .container table td:last-child, .modal-content table td:last-child {
+            border-bottom: 0;
+        }
+
+        .container table td::before, .modal-content table td::before {
+            content: attr(data-label); position: absolute; left: 10px;
+            width: calc(50% - 20px); padding-right: 10px; white-space: nowrap;
+            text-align: left; font-weight: bold; color: #c0c0c0;
+        }
+        
+        /* Penyesuaian khusus untuk kolom aksi di tabel klarifikasi */
+        td[data-label="Aksi"] { padding-top: 10px; padding-bottom: 10px; }
+        td[data-label="Aksi"] form { display: block; margin-bottom: 8px; }
+        td[data-label="Aksi"] form:last-child { margin-bottom: 0; }
+        td[data-label="Aksi"] .btn { width: 100%; text-align: center; }
+
+        /* Penyesuaian untuk kolom aksi di tabel dosen */
+        td[data-label="Aksi Dosen"] .btn { width: 100%; }
+        td[data-label="File Bukti"] { text-align: right; padding-right: 15px; }
+
+        /* --- Modal Responsif --- */
+        .modal-content { width: 95%; max-height: 85vh; }
+        .cuti-summary { flex-direction: column; gap: 15px; align-items: center; }
+
+        /* Penyesuaian sel colspan */
+        td[colspan="3"], td[colspan="6"] { text-align: center; padding-left: 12px; }
+        td[colspan="3"]::before, td[colspan="6"]::before { display: none; }
+    }
+
+</style>
+</head>
+<body>
+    <div class="overlay"></div>
+    <div class="container">
+        <div class="header">
+            <h1>Dashboard Sekretaris Jurusan</h1>
+            <div class="header-actions">
+                <a href="{{ url_for('dashboard_dosen') }}" class="btn btn-primary" style="margin-right: 10px;">
+                    Absensi Pribadi Saya
+                </a>
+                <a href="{{ url_for('history') }}" class="btn btn-info" style="margin-right: 10px;">Riwayat Persetujuan</a>
+                <a href="/logout" class="btn btn-danger">Logout</a>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <p><strong>Nama:</strong> {{ session['user_name'] }}</p>
+            <p><strong>Jurusan:</strong> {{ session['user_jurusan'] }}</p>
+        </div>
+
+        <h2>Daftar Pengajuan Klarifikasi</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tgl Pengajuan</th>
+                    <th>Nama Dosen</th>
+                    <th>Tgl Klarifikasi</th>
+                    <th>Jenis Surat</th>
+                    <th>File Bukti</th>
+                    <th>Aksi</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for klarifikasi in records %}
+                <tr>
+                    <td data-label="Tgl Pengajuan">{{ klarifikasi.tanggal_pengajuan.split(' ')[0] }}</td>
+                    <td data-label="Nama Dosen">{{ klarifikasi.nama_lengkap }}</td>
+                    <td data-label="Tgl Klarifikasi">{{ klarifikasi.tanggal_klarifikasi.split(' ')[0] }}</td>
+                    <td data-label="Jenis Surat">{{ klarifikasi.jenis_surat }}</td>
+                    <td data-label="File Bukti" class="action-icons">
+                        {% if klarifikasi.file_bukti %}
+                        <a href="{{ url_for('preview_bukti', clarification_id=klarifikasi.id) }}" target="_blank" class="btn-icon" title="Lihat Bukti di Tab Baru">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </a>
+                        <a href="{{ url_for('download_bukti', clarification_id=klarifikasi.id) }}" class="btn-icon" title="Download Bukti">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        </a>
+                        {% else %} 
+                        - 
+                        {% endif %}
+                    </td>
+                    <td data-label="Aksi">
+                        <form style="display:inline;" action="/proses_klarifikasi" method="post">
+                            <input type="hidden" name="clarification_id" value="{{ klarifikasi.id }}">
+                            <button type="submit" name="action" value="setuju" class="btn btn-success">Setujui</button>
+                        </form>
+                        <form style="display:inline;" action="/proses_klarifikasi" method="post" onsubmit="return handleTolak(this);">
+                            <input type="hidden" name="clarification_id" value="{{ klarifikasi.id }}">
+                            <input type="hidden" name="alasan_penolakan" value="">
+                            <button type="submit" name="action" value="tolak" class="btn btn-danger">Tolak</button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr><td colspan="6" style="text-align: center;">Tidak ada pengajuan klarifikasi.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <h2>Daftar Dosen Jurusan {{ session['user_jurusan'] }}</h2>
+        <table>
+            <thead>
+                <tr><th>NIP</th><th>Nama Lengkap</th><th>Aksi</th></tr>
+            </thead>
+            <tbody>
+                {% for dosen in dosen_list %}
+                <tr>
+                    <td data-label="NIP">{{ dosen.nip }}</td>
+                    <td data-label="Nama Lengkap">{{ dosen.nama_lengkap }}</td>
+                    <td data-label="Aksi Dosen"><button class="btn btn-info btn-sm" onclick="showAbsensi('{{ dosen.nip }}')">Cek Absensi</button></td>
+                </tr>
+                {% else %}
+                <tr><td colspan="3" style="text-align: center;">Tidak ada data dosen.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal-backdrop" id="absensiModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Riwayat Absensi</h3>
+                <button class="close-btn" onclick="hideAbsensi()">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                </div>
+        </div>
+    </div>
+
+<script>
+    function handleTolak(form) {
+        const alasan = prompt("Silakan masukkan alasan penolakan:");
+        if (alasan) { form.alasan_penolakan.value = alasan; return true; }
+        return false;
+    }
+
+    const modal = document.getElementById('absensiModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalBody = document.getElementById('modalBody');
+
+    async function showAbsensi(nip) {
+        modal.style.display = 'flex';
+        modalTitle.textContent = "Memuat data...";
+        modalBody.innerHTML = '<p style="text-align:center;">Mengambil data dari server...</p>';
+
+        try {
+            const response = await fetch(`/get_absensi_summary/${nip}`);
+            if (!response.ok) throw new Error('Network response was not ok.');
+            const data = await response.json();
+            
+            modalTitle.textContent = `Riwayat Absensi: ${data.nama_lengkap}`;
+            const leaveHistoryUrl = `/riwayat_cuti_bawahan/${nip}`;
+            
+            // [PERUBAHAN] Menambahkan class "cuti-summary" dan data-label pada tabel dinamis
+            let contentHTML = `
+                <div class="cuti-summary">
+                    <div><p>Jatah Cuti Tahunan</p><p>${data.jatah_cuti} Hari</p></div>
+                    <div><p>Cuti Terpakai</p><p>${data.cuti_terpakai} Hari</p></div>
+                    <div><p>Sisa Cuti</p><p>${data.sisa_cuti} Hari</p></div>
+                </div>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <a href="${leaveHistoryUrl}" target="_blank" style="color: #66b2ff; text-decoration: underline; font-weight: 500; font-size: 14px;">
+                        Lihat Riwayat Cuti (Input Admin) di Tab Baru
+                    </a>
+                </div>
+                <h4>Rekap Absensi Bulan Terakhir</h4>
+                <table style="width: 100%;">
+                    <thead><tr><th>Tanggal</th><th>Jam Masuk</th><th>Jam Pulang</th><th>Status</th></tr></thead>
+                    <tbody>
+            `;
+
+            if (data.records && data.records.length > 0) {
+                data.records.forEach(rec => {
+                    contentHTML += `
+                        <tr>
+                            <td data-label="Tanggal">${rec.tanggal_formatted}</td>
+                            <td data-label="Jam Masuk">${rec.jam_masuk_formatted}</td>
+                            <td data-label="Jam Pulang">${rec.jam_pulang_formatted}</td>
+                            <td data-label="Status" class="status-${rec.status_color}">${rec.status_text}</td>
+                        </tr>`;
+                });
+            } else {
+                contentHTML += `<tr><td colspan="4" style="text-align:center;">Tidak ada data absensi untuk bulan ini.</td></tr>`;
+            }
+            contentHTML += `</tbody></table>`;
+            modalBody.innerHTML = contentHTML;
+
+        } catch (error) {
+            console.error('Error fetching data:', error);
+            modalTitle.textContent = 'Gagal Memuat Data';
+            modalBody.innerHTML = '<p style="text-align:center; color: #ff6b6b;">Terjadi kesalahan saat mengambil data.</p>';
+        }
+    }
+
+    function hideAbsensi() {
+        modal.style.display = 'none';
+    }
+</script>
+</body>
+</html>

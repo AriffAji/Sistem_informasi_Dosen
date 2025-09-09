@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>Input Cuti Dosen</title>
-  <link rel="icon" type="image/png" href="https://res.cloudinary.com/dvul7dq3b/image/upload/v1755843240/logowebp_bqssky.webp" />
   <style>
     /* Reset dasar */
     * {
@@ -12,16 +11,17 @@
       box-sizing: border-box;
     }
 
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: url("https://res.cloudinary.com/dvul7dq3b/image/upload/v1755843240/backgroundwebp_vc0pzl.webp") no-repeat center center/cover;
-      padding: 30px 15px;
-    }
-
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            height: 100vh;
+            background: url("https://res.cloudinary.com/dvul7dq3b/image/upload/v1757145957/bg_vgrbsv.webp") repeat-y center top / cover;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 30px 10px;
+            color: #fff;
+        }
+        
     .overlay {
       position: fixed;
       top: 0; left: 0;
@@ -194,148 +194,143 @@
   </style>
 </head>
 <body>
-  <div class="overlay"></div>
+    <div class="overlay"></div>
 
-  <!-- Form Input -->
-  <div class="container">
-    <div class="header">
-      <img src="https://res.cloudinary.com/dvul7dq3b/image/upload/v1755843240/logowebp_bqssky.webp" alt="Logo">
-      <h1>Formulir Input Cuti Dosen</h1>
+    <!-- Form Input -->
+    <div class="container">
+        <div class="header">
+            <h1>Formulir Input Cuti Staf</h1>
+        </div>
+        
+        <!-- Menampilkan pesan flash (notifikasi) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }}">{{ message }}</div>
+                {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="nip_input">NIP</label>
+                <input list="nip_list" id="nip_input" name="nip" required autocomplete="off">
+                <datalist id="nip_list">
+                    <!-- PERBAIKAN: Loop melalui 'list_staff' -->
+                    {% for staff in list_staff %}
+                        <option value="{{ staff.nip }}">{{ staff.nama_lengkap }}</option>
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="form-group">
+                <!-- Label diubah -->
+                <label for="nama_input">Nama Staf</label>
+                <input list="nama_list" id="nama_input" name="nama_lengkap" required autocomplete="off">
+                <datalist id="nama_list">
+                    <!-- PERBAIKAN: Loop melalui 'list_staff' -->
+                    {% for staff in list_staff %}
+                        <option value="{{ staff.nama_lengkap }}">{{ staff.nip }}</option>
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <!-- ... (Sisa form Anda tidak perlu diubah) ... -->
+            <div class="form-group">
+                <label for="tanggal_surat">Tanggal Surat</label>
+                <input type="date" id="tanggal_surat" name="tanggal_surat" required>
+            </div>
+            <div class="form-group">
+                <label for="start_date">Tanggal Mulai Cuti</label>
+                <input type="date" id="start_date" name="start_date" required>
+            </div>
+            <div class="form-group">
+                <label for="end_date">Tanggal Akhir Cuti</label>
+                <input type="date" id="end_date" name="end_date" required>
+            </div>
+            <div class="form-group">
+                <label for="jenis_cuti">Jenis Cuti</label>
+                <select id="jenis_cuti" name="jenis_cuti" required>
+                    <option value="Cuti Tahunan">Cuti Tahunan</option>
+                    <option value="Cuti Besar">Cuti Besar</option>
+                    <option value="Cuti Sakit">Cuti Sakit</option>
+                    <option value="Cuti Bersalin">Cuti Bersalin</option>
+                    <option value="Cuti Alasan Penting">Cuti Alasan Penting</option>
+                    <option value="Cuti CLTN">Cuti CLTN</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="alasan_cuti">Alasan Cuti</label>
+                <textarea id="alasan_cuti" name="alasan_cuti" rows="3" placeholder="Tuliskan alasan cuti..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="file_surat_cuti">Upload Surat Cuti</label>
+                <input type="file" id="file_surat_cuti" name="file_surat_cuti">
+            </div>
+            <button type="submit" class="btn btn-primary">Simpan</button>
+            <a href="{{ url_for('dashboard_admin') }}" class="btn btn-secondary">Batal</a>
+        </form>
     </div>
 
-    <form method="post" enctype="multipart/form-data">
-      <div class="form-group">
-        <label for="nip_input">NIP</label>
-        <input list="nip_list" id="nip_input" name="nip" required autocomplete="off">
-        <datalist id="nip_list">
-          {% for dosen in list_dosen %}
-            <option value="{{ dosen.nip }}">{{ dosen.nama_lengkap }}</option>
-          {% endfor %}
-        </datalist>
-      </div>
+    <!-- Tabel Riwayat -->
+    <div class="container">
+        <h2>Riwayat Input Cuti</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Tanggal Surat</th>
+                    <!-- Label diubah -->
+                    <th>Nama Staf</th>
+                    <th>Jenis Cuti</th>
+                    <th>Rentang Cuti</th>
+                    <th>Surat</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for history in histories %}
+                <tr>
+                    <td>{{ history.tanggal_surat }}</td>
+                    <td>{{ history.nama_lengkap }}</td>
+                    <td>{{ history.jenis_cuti }}</td>
+                    <td>{{ history.tanggal_mulai }} s/d {{ history.tanggal_selesai }}</td>
+                    <td>
+                        {% if history.file_surat_cuti %}
+                           <a href="{{ url_for('serve_uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: #bbb;">Belum ada riwayat cuti yang diinput.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
-      <div class="form-group">
-        <label for="nama_input">Nama Dosen</label>
-        <input list="nama_list" id="nama_input" name="nama_lengkap" required autocomplete="off">
-        <datalist id="nama_list">
-          {% for dosen in list_dosen %}
-            <option value="{{ dosen.nama_lengkap }}">{{ dosen.nip }}</option>
-          {% endfor %}
-        </datalist>
-      </div>
+    <script>
+        // JavaScript sekarang bekerja dengan 'list_staff'
+        const listStaff = {{ list_staff | tojson }};
+        const nipInput = document.getElementById('nip_input');
+        const namaInput = document.getElementById('nama_input');
 
-      <div class="form-group">
-        <label for="tanggal_surat">Tanggal Surat</label>
-        <input type="date" id="tanggal_surat" name="tanggal_surat" required>
-      </div>
+        nipInput.addEventListener('input', function() {
+            const selectedStaff = listStaff.find(s => s.nip === this.value);
+            if (selectedStaff) {
+                namaInput.value = selectedStaff.nama_lengkap;
+            }
+        });
 
-      <div class="form-group">
-        <label for="start_date">Tanggal Mulai Cuti</label>
-        <input type="date" id="start_date" name="start_date" required>
-      </div>
-
-      <div class="form-group">
-        <label for="end_date">Tanggal Akhir Cuti</label>
-        <input type="date" id="end_date" name="end_date" required>
-      </div>
-
-      <div class="form-group">
-        <label for="jenis_cuti">Jenis Cuti</label>
-        <select id="jenis_cuti" name="jenis_cuti" required>
-          <option value="Cuti Tahunan">Cuti Tahunan</option>
-          <option value="Cuti Besar">Cuti Besar</option>
-          <option value="Cuti Sakit">Cuti Sakit</option>
-          <option value="Cuti Bersalin">Cuti Bersalin</option>
-          <option value="Cuti Alasan Penting">Cuti Alasan Penting</option>
-          <option value="Cuti CLTN">Cuti CLTN</option>
-        </select>
-      </div>
-
-      <div class="form-group">
-        <label for="alasan_cuti">Alasan Cuti</label>
-        <textarea id="alasan_cuti" name="alasan_cuti" rows="3" placeholder="Tuliskan alasan cuti..."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label for="file_surat_cuti">Upload Surat Cuti</label>
-        <input type="file" id="file_surat_cuti" name="file_surat_cuti">
-      </div>
-
-      <button type="submit" class="btn btn-primary">Simpan</button>
-      <a href="{{ url_for('dashboard_admin') }}" class="btn btn-secondary">Batal</a>
-
-            {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          <div class="flash-messages">
-          {% for category, message in messages %}
-            <div class="alert alert-{{ category }}">{{ message }}</div>
-          {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-<!-- <form method="post" enctype="multipart/form-data"> -->
-    </form>
-  </div>
-
-  <!-- Tabel Riwayat -->
-  <div class="container">
-    <h2>Riwayat Input Cuti</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Tanggal Surat</th>
-          <th>Nama Dosen</th>
-          <th>Jenis Cuti</th>
-          <th>Rentang Cuti</th>
-          <th>Surat</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for history in histories %}
-        <tr>
-          <td>{{ history.tanggal_surat }}</td>
-          <td>{{ history.nama_lengkap }}</td>
-          <td>{{ history.jenis_cuti }}</td>
-          <td>{{ history.tanggal_mulai }} s/d {{ history.tanggal_selesai }}</td>
-          <td>
-            {% if history.file_surat_cuti %}
-              <a href="{{ url_for('serve_uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
-            {% else %}
-              -
-            {% endif %}
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="5" style="text-align: center; color: #bbb;">Belum ada riwayat cuti yang diinput.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-
-  <script>
-      // // Sinkronisasi NIP dan Nama
-      // const listDosen = {{ list_dosen | tojson }};
-      // const nipInput = document.getElementById('nip_input');
-      // const namaInput = document.getElementById('nama_input');
-
-      // nipInput.addEventListener('input', function() {
-      //   const selectedDosen = listDosen.find(d => d.nip === this.value);
-      //   if (selectedDosen) {
-      //     namaInput.value = selectedDosen.nama_lengkap;
-      //   }
-      // });
-
-      // namaInput.addEventListener('input', function() {
-      //   const selectedDosen = listDosen.find(d => d.nama_lengkap === this.value);
-      //   if (selectedDosen) {
-      //     nipInput.value = selectedDosen.nip;
-      //   }
-      // });
-
-
-
-  </script>
+        namaInput.addEventListener('input', function() {
+            const selectedStaff = listStaff.find(s => s.nama_lengkap === this.value);
+            if (selectedStaff) {
+                nipInput.value = selectedStaff.nip;
+            }
+        });
+    </script>
 </body>
 </html>

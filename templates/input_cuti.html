@@ -264,16 +264,16 @@
       <button type="submit" class="btn btn-primary">Simpan</button>
       <a href="{{ url_for('dashboard_admin') }}" class="btn btn-secondary">Batal</a>
 
-      {% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    <div class="flash-messages">
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }}">{{ message }}</div>
-    {% endfor %}
-    </div>
-  {% endif %}
-{% endwith %}
-<form method="post" enctype="multipart/form-data">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">{{ message }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+<!-- <form method="post" enctype="multipart/form-data"> -->
     </form>
   </div>
 
@@ -298,9 +298,6 @@
           <td>{{ history.jenis_cuti }}</td>
           <td>{{ history.tanggal_mulai }} s/d {{ history.tanggal_selesai }}</td>
           <td>
-            <!-- {% if history.file_surat_cuti %}
-              <a href="{{ url_for('uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
-            {% else %} -->
             {% if history.file_surat_cuti %}
               <a href="{{ url_for('serve_uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
             {% else %}
@@ -318,24 +315,24 @@
   </div>
 
   <script>
-    // Sinkronisasi NIP dan Nama
-    const listDosen = {{ list_dosen | tojson }};
-    const nipInput = document.getElementById('nip_input');
-    const namaInput = document.getElementById('nama_input');
+      // Sinkronisasi NIP dan Nama
+      const listDosen = {{ list_dosen | tojson }};
+      const nipInput = document.getElementById('nip_input');
+      const namaInput = document.getElementById('nama_input');
 
-    nipInput.addEventListener('input', function() {
-      const selectedDosen = listDosen.find(d => d.nip === this.value);
-      if (selectedDosen) {
-        namaInput.value = selectedDosen.nama_lengkap;
-      }
-    });
+      nipInput.addEventListener('input', function() {
+        const selectedDosen = listDosen.find(d => d.nip === this.value);
+        if (selectedDosen) {
+          namaInput.value = selectedDosen.nama_lengkap;
+        }
+      });
 
-    namaInput.addEventListener('input', function() {
-      const selectedDosen = listDosen.find(d => d.nama_lengkap === this.value);
-      if (selectedDosen) {
-        nipInput.value = selectedDosen.nip;
-      }
-    });
+      namaInput.addEventListener('input', function() {
+        const selectedDosen = listDosen.find(d => d.nama_lengkap === this.value);
+        if (selectedDosen) {
+          nipInput.value = selectedDosen.nip;
+        }
+      });
   </script>
 </body>
 </html>

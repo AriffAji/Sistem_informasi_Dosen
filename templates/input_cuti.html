@@ -315,7 +315,7 @@
   </div>
 
   <script>
-      // Sinkronisasi NIP dan Nama
+      // // Sinkronisasi NIP dan Nama
       // const listDosen = {{ list_dosen | tojson }};
       // const nipInput = document.getElementById('nip_input');
       // const namaInput = document.getElementById('nama_input');
@@ -333,23 +333,9 @@
       //     nipInput.value = selectedDosen.nip;
       //   }
       // });
-      const listDosen = {{ list_staff | tojson }};
-      const nipInput = document.getElementById('nip_input');
-      const namaInput = document.getElementById('nama_input');
 
-      nipInput.addEventListener('input', function() {
-        const selectedDosen = listDosen.find(d => d.nip === this.value);
-        if (selectedDosen) {
-          namaInput.value = selectedDosen.nama_lengkap;
-        }
-      });
 
-      namaInput.addEventListener('input', function() {
-        const selectedDosen = listDosen.find(d => d.nama_lengkap === this.value);
-        if (selectedDosen) {
-          nipInput.value = selectedDosen.nip;
-        }
-      });
+
   </script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 Flask==2.3.2
 gunicorn==21.2.0
 Werkzeug==2.3.7
+pywebpush==1.14.0
 
 # Data handling
 pandas==2.0.3

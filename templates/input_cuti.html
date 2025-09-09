@@ -298,8 +298,11 @@
           <td>{{ history.jenis_cuti }}</td>
           <td>{{ history.tanggal_mulai }} s/d {{ history.tanggal_selesai }}</td>
           <td>
-            {% if history.file_surat_cuti %}
+            <!-- {% if history.file_surat_cuti %}
               <a href="{{ url_for('uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
+            {% else %} -->
+            {% if history.file_surat_cuti %}
+              <a href="{{ url_for('serve_uploaded_file', filename=history.file_surat_cuti.split('\\')[-1]) }}" target="_blank">Lihat</a>
             {% else %}
               -
             {% endif %}

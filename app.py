@@ -1,17 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, send_file
+from flask import Flask, render_template, request, redirect, url_for, session, flash, send_from_directory, send_file, jsonify
 from flask_session import Session
-from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash, secure_filename
 from redis import Redis
 import sqlite3
 from datetime import datetime, timedelta
 import os
-from werkzeug.utils import secure_filename
 import calendar
 import pandas as pd
 import io
 import logging   # <--- ini baris import logging
 import traceback
 from flask import send_file
+from pywebpush import webpush, WebPushException
 
 # setup logging
 logging.basicConfig(
@@ -22,7 +22,7 @@ logging.basicConfig(
 app = Flask(__name__)   # inisialisasi app Flask
 app.logger.info("Aplikasi Flask sudah start 🚀")   # logging pertama kali
 
-# --- Upload folder (buat default & set ke config) ---
+# --- Upload folder (buat default & set ke config) ---Z
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # Pastikan ukuran maksimal upload (opsional): misal 16 MB
@@ -75,8 +75,8 @@ def index():
 def login():
     error = None
 
-    if 'user_id' in session:
-        return redirect(url_for('login_blocked'))
+    # if 'user_id' in session:
+    #     return redirect(url_for('login_blocked'))
 
     # Kalau user submit form login
     if request.method == 'POST':
@@ -117,6 +117,9 @@ def login():
                 return redirect(url_for('dashboard_kajur'))
             elif user['role'] == 'Admin':
                 return redirect(url_for('dashboard_admin'))
+            else:
+                error = 'Role Anda tidak dikenali atau tidak memiliki halaman dashboard.'
+                return render_template('login.html', error=error)
         else:
             # Password / NIP salah
             error = 'NIP atau Password salah.'
@@ -133,30 +136,26 @@ def login():
 # --- Rute jika user back ke halaman login ---
 # @app.route('/login-blocked')
 # def login_blocked():
-#     return render_template('login_blocked.html')
-# --- Rute jika user back ke halaman login ---
-@app.route('/login-blocked')
-def login_blocked():
-    # pastikan user sudah login
-    if 'user_role' not in session:
-        return redirect(url_for('login'))
+#     # pastikan user sudah login
+#     if 'user_role' not in session:
+#         return redirect(url_for('login'))
 
-    # mapping role ke dashboard
-    role_redirect_map = {
-        "Dosen": url_for('dashboard_dosen'),
-        "Kajur": url_for('dashboard_kajur'),
-        "Sekjur": url_for('dashboard_sekjur'),
-        "Wadir1": url_for('dashboard_wadir1'),
-        "Wadir2": url_for('dashboard_wadir2'),
-        "Wadir3": url_for('dashboard_wadir3'),
-        "Direktur": url_for('dashboard_direktur'),
-        "Admin": url_for('dashboard_admin'),
-    }
+#     # mapping role ke dashboard
+#     role_redirect_map = {
+#         "Dosen": url_for('dashboard_dosen'),
+#         "Kajur": url_for('dashboard_kajur'),
+#         "Sekjur": url_for('dashboard_sekjur'),
+#         "Wadir1": url_for('dashboard_wadir1'),
+#         "Wadir2": url_for('dashboard_wadir2'),
+#         "Wadir3": url_for('dashboard_wadir3'),
+#         "Direktur": url_for('dashboard_direktur'),
+#         "Admin": url_for('dashboard_admin'),
+#     }
 
-    role = session['user_role']
-    dashboard_url = role_redirect_map.get(role, url_for('login'))
+#     role = session['user_role']
+#     dashboard_url = role_redirect_map.get(role, url_for('login'))
 
-    return render_template('login_blocked.html', dashboard_url=dashboard_url)
+#     return render_template('login_blocked.html', dashboard_url=dashboard_url)
 
 
 # Handle Back Session 
@@ -272,7 +271,7 @@ def submit_klarifikasi():
     conn = get_db_connection()
     user_nip = session['user_id']
     
-    # Mencari atasan dari pengguna yang mengajukan (Logika ini sudah benar)
+    # Mencari atasan dari pengguna yang mengajukan
     user_data = conn.execute("SELECT id_atasan FROM users WHERE nip = ?", (user_nip,)).fetchone()
     
     if not user_data or not user_data['id_atasan']:
@@ -284,27 +283,19 @@ def submit_klarifikasi():
 
     record_ids = request.form.getlist('record_ids')
     
-    # ==========================================================
-    # PENAMBAHAN BARU: PENGAMAN GANDA UNTUK MENCEGAH DUPLIKAT
-    # ==========================================================
+    # Validasi duplikat
     for record_id in record_ids:
-        # Periksa status saat ini dari record absensi yang dipilih
         attendance_record = conn.execute("SELECT status FROM attendance WHERE rowid = ?", (record_id,)).fetchone()
-        
-        # Jika record tidak ada ATAU statusnya sudah 'Menunggu Persetujuan', tolak permintaan
         if not attendance_record or (attendance_record['status'] and "Menunggu Persetujuan" in attendance_record['status']):
             conn.close()
-            flash("GAGAL: Salah satu tanggal yang Anda pilih sudah pernah diajukan dan sedang menunggu persetujuan. Silakan tunggu hingga proses selesai.", "error")
+            flash("GAGAL: Salah satu tanggal yang Anda pilih sudah pernah diajukan dan sedang menunggu persetujuan.", "error")
             return redirect(url_for('dashboard_dosen'))
-    # ==========================================================
-    # AKHIR BLOK VALIDASI
-    # ==========================================================
 
     # Jika semua validasi lolos, baru lanjutkan proses penyimpanan
     kategori_surat = request.form.get('kategori_surat')
     jenis_surat = request.form.get('jenis_surat')
 
-    # Logika untuk menangani file upload (Logika ini sudah benar)
+    # Logika untuk menangani file upload
     file_path = None
     if 'file_bukti' in request.files:
         file = request.files['file_bukti']
@@ -313,10 +304,9 @@ def submit_klarifikasi():
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
 
-    # Memproses setiap tanggal yang dipilih (Logika ini sudah benar)
+    # Memproses setiap tanggal yang dipilih
     for record_id in record_ids:
         attendance_record = conn.execute("SELECT * FROM attendance WHERE rowid = ?", (record_id,)).fetchone()
-        
         if attendance_record:
             conn.execute(
                 """
@@ -343,88 +333,26 @@ def submit_klarifikasi():
             conn.execute("UPDATE attendance SET status = 'Menunggu Persetujuan' WHERE rowid = ?", (record_id,))
 
     conn.commit()
+
+    # ==========================================================
+    # ==          PANGGIL FUNGSI NOTIFIKASI DI SINI           ==
+    # ==========================================================
+    try:
+        nama_pengaju = session.get('user_name', 'Seorang Dosen')
+        print(f"Mengirim notifikasi pengajuan baru ke atasan NIP: {id_atasan}")
+        send_push_notification(
+            target_nip=id_atasan,
+            title="Pengajuan Klarifikasi Baru",
+            body=f"Ada pengajuan baru dari {nama_pengaju}. Mohon segera ditinjau.",
+            url="/dashboard_kajur" # Sesuaikan URL dashboard atasan jika berbeda
+        )
+    except Exception as e:
+        print(f"GAGAL MENGIRIM NOTIFIKASI (submit_klarifikasi): {e}")
+    # ==========================================================
+    
     conn.close()
 
     flash('Klarifikasi berhasil diajukan.', 'success')
-    return redirect(url_for('dashboard_dosen'))
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-        
-    record_ids = request.form.getlist('record_ids')
-    # Ambil jenis surat dari form untuk divalidasi
-    jenis_surat = request.form.get('jenis_surat') 
-    
-    if not record_ids:
-        flash("Anda harus memilih setidaknya satu tanggal untuk diklarifikasi.", "error")
-        return redirect(url_for('dashboard_dosen'))
-    
-    conn = None 
-    try:
-        conn = get_db_connection()
-
-        # --- BLOK BARU: VALIDASI BATAS MAKSIMAL PENGAJUAN ---
-        if jenis_surat in ["Lupa Absen Masuk", "Lupa Absen Pulang"]:
-            current_month = datetime.now().strftime('%Y-%m')
-            nip = session['user_id']
-            
-            # Hitung berapa kali jenis surat ini sudah diajukan di bulan ini
-            count_data = conn.execute("""
-                SELECT COUNT(*) as total FROM clarifications 
-                WHERE nip = ? AND jenis_surat = ? AND strftime('%Y-%m', tanggal_pengajuan) = ?
-            """, (nip, jenis_surat, current_month)).fetchone()
-            
-            existing_count = count_data['total'] if count_data else 0
-
-            # Jika sudah 2x atau lebih, gagalkan proses
-            if existing_count >= 2:
-                # Koneksi ditutup di dalam blok finally, jadi kita tidak perlu menutupnya di sini
-                flash(f"GAGAL: Anda sudah mencapai batas maksimal (2x) untuk pengajuan '{jenis_surat}' di bulan ini.", "error")
-                return redirect(url_for('dashboard_dosen'))
-        # --- AKHIR BLOK BARU ---
-
-        # Jika validasi lolos, lanjutkan proses seperti biasa (tidak ada perubahan di bawah ini)
-        file_path = None
-        if 'file_bukti' in request.files:
-            file = request.files['file_bukti']
-            if file.filename != '':
-                timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
-                filename = secure_filename(f"{session['user_id']}-{timestamp}-{file.filename}")
-                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-                file.save(file_path)
-
-        for record_id in record_ids:
-            att_rec = conn.execute("SELECT tanggal FROM attendance WHERE rowid = ?", (record_id,)).fetchone()
-            if not att_rec:
-                continue
-
-            conn.execute("""
-                INSERT INTO clarifications (nip, nama_lengkap, jurusan, tanggal_klarifikasi, kategori_surat, jenis_surat, file_bukti)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                session.get('user_id'), 
-                session.get('user_name'),
-                session.get('user_jurusan'),
-                att_rec['tanggal'],
-                request.form['kategori_surat'], 
-                request.form['jenis_surat'], 
-                file_path
-            ))
-            
-            conn.execute("UPDATE attendance SET status = 'Menunggu Persetujuan Kajur', keterangan = '' WHERE rowid = ?", (record_id,))
-
-        conn.commit()
-        flash("Klarifikasi berhasil diajukan dan sedang menunggu persetujuan.", "success")
-
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        flash(f"Terjadi kesalahan saat mengajukan klarifikasi: {e}", "error")
-        print(f"ERROR submit_klarifikasi: {e}")
-
-    finally:
-        if conn:
-            conn.close()
-            
     return redirect(url_for('dashboard_dosen'))
 
 @app.route('/dashboard_sekjur')
@@ -504,9 +432,7 @@ def proses_klarifikasi():
     approver_role = session.get('user_role', 'Atasan')
 
     conn = get_db_connection()
-
-    # --- LANGKAH 1: AMBIL DATA PENTING DARI KLARIFIKASI ---
-    # Kita perlu tahu detail klarifikasi ini untuk bisa update tabel attendance
+    
     klarifikasi = conn.execute("SELECT * FROM clarifications WHERE id = ?", (clarification_id,)).fetchone()
     
     if not klarifikasi:
@@ -514,35 +440,34 @@ def proses_klarifikasi():
         conn.close()
         return redirect(request.referrer)
 
-    # Ambil NIP pengaju dan tanggal klarifikasi dari data yang kita dapatkan
     nip_pengaju = klarifikasi['nip_pengaju']
     tanggal_klarifikasi_obj = datetime.strptime(klarifikasi['tanggal_klarifikasi'], '%Y-%m-%d %H:%M:%S')
     
-    # --- LANGKAH 2: PROSES BERDASARKAN AKSI (SETUJU/TOLAK) ---
+    # Tentukan title dan body notifikasi berdasarkan aksi
+    tanggal_str = tanggal_klarifikasi_obj.strftime('%d %B %Y')
+    notif_title = ""
+    notif_body = ""
+    
     if action == 'setuju':
-        # Tentukan singkatan berdasarkan kategori surat
         kategori = klarifikasi['kategori_surat']
         singkatan = "FL" if kategori == "Fleksibel" else "NF"
         
         status_final_clarification = f'Disetujui oleh {approver_role}'
         status_final_attendance = f'Disetujui - Surat {singkatan}'
-        keterangan_attendance = klarifikasi['jenis_surat'] # Keterangan diisi dengan jenis surat
+        keterangan_attendance = klarifikasi['jenis_surat']
 
-        # 2a. Update tabel clarifications, tandai proses selesai
         conn.execute(
             "UPDATE clarifications SET status_final = ?, nip_approver_sekarang = NULL WHERE id = ?",
             (status_final_clarification, clarification_id)
         )
-        
-        # 2b. Update tabel attendance yang sesuai
         conn.execute(
-            """
-            UPDATE attendance 
-            SET status = ?, keterangan = ? 
-            WHERE nip = ? AND date(tanggal) = date(?)
-            """,
+            "UPDATE attendance SET status = ?, keterangan = ? WHERE nip = ? AND date(tanggal) = date(?)",
             (status_final_attendance, keterangan_attendance, nip_pengaju, tanggal_klarifikasi_obj)
         )
+        
+        # Siapkan pesan notifikasi untuk persetujuan
+        notif_title = "Pengajuan Klarifikasi Disetujui"
+        notif_body = f"Pengajuan Anda untuk tanggal {tanggal_str} telah disetujui."
         
     elif action == 'tolak':
         alasan = request.form.get('alasan_penolakan', 'Tidak ada alasan spesifik')
@@ -551,23 +476,36 @@ def proses_klarifikasi():
         status_final_attendance = 'Ditolak'
         keterangan_attendance = f"{alasan} - Silahkan Klarifikasi Ulang"
         
-        # 2a. Update tabel clarifications
         conn.execute(
             "UPDATE clarifications SET status_final = ?, catatan_revisi = ?, nip_approver_sekarang = NULL WHERE id = ?",
             (status_final_clarification, alasan, clarification_id)
         )
-        
-        # 2b. Update tabel attendance
         conn.execute(
-            """
-            UPDATE attendance 
-            SET status = ?, keterangan = ?
-            WHERE nip = ? AND date(tanggal) = date(?)
-            """,
+            "UPDATE attendance SET status = ?, keterangan = ? WHERE nip = ? AND date(tanggal) = date(?)",
             (status_final_attendance, keterangan_attendance, nip_pengaju, tanggal_klarifikasi_obj)
         )
         
+        # Siapkan pesan notifikasi untuk penolakan
+        notif_title = "Pengajuan Klarifikasi Ditolak"
+        notif_body = f"Pengajuan Anda untuk tanggal {tanggal_str} ditolak. Silakan cek dashboard Anda."
+        
     conn.commit()
+
+    # ==========================================================
+    # ==          PANGGIL FUNGSI NOTIFIKASI DI SINI           ==
+    # ==========================================================
+    try:
+        print(f"Mengirim notifikasi status ke dosen NIP: {nip_pengaju}")
+        send_push_notification(
+            target_nip=nip_pengaju,
+            title=notif_title,
+            body=notif_body,
+            url="/dashboard_dosen" # Arahkan dosen ke dashboard pribadinya
+        )
+    except Exception as e:
+        print(f"GAGAL MENGIRIM NOTIFIKASI (proses_klarifikasi): {e}")
+    # ==========================================================
+
     conn.close()
 
     flash(f"Pengajuan telah berhasil di-{action}.", 'success')
@@ -587,6 +525,7 @@ def dashboard_admin():
 # Pastikan 'flash' sudah ada di baris import Anda di bagian atas file
 # Contoh: from flask import Flask, render_template, request, redirect, url_for, session, flash
 
+# --- Rute Tambah Pengguna ---
 @app.route('/tambah_pengguna', methods=['GET', 'POST'])
 def tambah_pengguna():
     # Memeriksa apakah pengguna adalah Admin
@@ -626,6 +565,7 @@ def tambah_pengguna():
     # Mengirim daftar atasan tersebut ke template HTML
     return render_template('tambah_pengguna.html', superiors=potential_superiors)
 
+# --- Rute Wadir 1 ---
 @app.route('/dashboard_wadir1')
 def dashboard_wadir1():
     if 'user_role' not in session or session['user_role'] != 'Wadir1':
@@ -650,6 +590,7 @@ def dashboard_wadir1():
     # Kirim ke template yang sesuai
     return render_template('dashboard_wadir1.html', records=pending_approvals, bawahan_list=bawahan_list)
 
+# --- Rute Wadir 2 ---
 @app.route('/dashboard_wadir2')
 def dashboard_wadir2():
     if 'user_role' not in session or session['user_role'] != 'Wadir2':
@@ -672,6 +613,7 @@ def dashboard_wadir2():
     
     return render_template('dashboard_wadir2.html', records=pending_approvals, bawahan_list=bawahan_list)
 
+# --- Rute Wadir 3 ---
 @app.route('/dashboard_wadir3')
 def dashboard_wadir3():
     if 'user_role' not in session or session['user_role'] != 'Wadir3':
@@ -694,6 +636,7 @@ def dashboard_wadir3():
     
     return render_template('dashboard_wadir3.html', records=pending_approvals, bawahan_list=bawahan_list)
 
+# --- Rute Direktur ---
 @app.route('/dashboard_direktur')
 def dashboard_direktur():
     if 'user_role' not in session or session['user_role'] != 'Direktur':
@@ -716,7 +659,9 @@ def dashboard_direktur():
     
     return render_template('dashboard_direktur.html', records=pending_approvals, bawahan_list=bawahan_list)
 
-
+# --- Rute Tambah Cuti ---
+@app.route('/input_cuti', methods=['GET', 'POST'])
+def input_cuti():
     if 'user_role' not in session or session['user_role'] != 'Admin':
         return redirect(url_for('login'))
 
@@ -820,6 +765,7 @@ def dashboard_direktur():
     
     return render_template('input_cuti.html', list_staff=list_staff, histories=history_cuti)
 
+# --- Rute Absensi ---
 @app.route('/get_absensi_summary/<nip>')
 def get_absensi_summary(nip):
     # Daftar semua role yang boleh menggunakan fitur ini (dari kode Anda)
@@ -907,6 +853,7 @@ def get_absensi_summary(nip):
         "sisa_cuti": sisa_cuti_tahunan
     })
 
+# --- Rute Rekap Laporan ---
 @app.route('/rekap_laporan_view')
 def rekap_laporan_view():
     if 'user_role' not in session or session['user_role'] != 'Admin':
@@ -1017,6 +964,7 @@ def rekap_laporan_view():
         traceback.print_exc()
         return "Terjadi kesalahan saat memproses laporan.", 500
 
+# --- Rute Download Laporan ---
 @app.route('/download_laporan')
 def download_laporan():
     if 'user_role' not in session or session['user_role'] != 'Admin':
@@ -1131,6 +1079,7 @@ def download_laporan():
         flash("Terjadi kesalahan saat membuat file Excel.", "error")
         return redirect(url_for('rekap_laporan_view'))
 
+# --- Rute Riwayat Cuti ---
 @app.route('/riwayat_cuti')
 def riwayat_cuti():
     # --- PERBAIKAN: Pengecekan peran yang lebih fleksibel ---
@@ -1151,6 +1100,7 @@ def riwayat_cuti():
 
     # Mengirim nama pengguna ke template
     return render_template('riwayat_cuti.html', riwayat=cuti_records, nama_pengguna=nama_pengguna)
+
 
 # =====================================================================
 # FUNGSI BARU YANG AMAN: HANYA UNTUK MELIHAT RIWAYAT CUTI BAWAHAN
@@ -1340,3 +1290,92 @@ if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
 
     app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
+
+# --- 1. KONFIGURASI VAPID KEYS ---
+# Letakkan ini di bagian atas app.py, di bawah baris import
+
+VAPID_PRIVATE_KEY = "0EhUSgB3dIxFDnWnh4uIZagyHSvq2eFUIV_Y55KUH74"
+VAPID_PUBLIC_KEY = "BBiLoQsjOUL95aidqvNnPJ-W0Aer97qBRAqHQJPST1ThMK7tc9q2XeDw2yhmQALtPNkX4yhwGPpaO00fFEDbNyQ"
+VAPID_CLAIMS = {
+    "sub": "mailto:fendikepegppnp@gmail.com" 
+}
+
+# --- 2. ENDPOINT UNTUK MENERIMA DATA SUBSCRIPTION DARI BROWSER ---
+@app.route('/api/subscribe', methods=['POST'])
+def subscribe():
+    # Ambil data subscription dari request JSON
+    subscription_data = request.get_json()
+    if not subscription_data:
+        return jsonify({"error": "No subscription data provided"}), 400
+
+    # Identifikasi user yang sedang login dari session
+    user_nip = session.get('user_id') 
+    if not user_nip:
+        return jsonify({"error": "User not authenticated"}), 401
+
+    try:
+        # Simpan data subscription ke database
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        subscription_json = json.dumps(subscription_data)
+        
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET push_subscription_info = ? WHERE nip = ?", 
+                       (subscription_json, user_nip))
+        conn.commit()
+        conn.close()
+        
+        print(f"[SUCCESS] Subscription berhasil disimpan untuk NIP: {user_nip}")
+        return jsonify({"success": True}), 200
+
+    except Exception as e:
+        print(f"[ERROR] Gagal menyimpan subscription: {e}")
+        return jsonify({"error": str(e)}), 500
+
+# --- 3. FUNGSI UTAMA UNTUK MENGIRIM NOTIFIKASI ---
+def send_push_notification(target_nip, title, body, url="/"):
+    """
+    Mengirim notifikasi push ke NIP tertentu.
+    """
+    try:
+        # Ambil data subscription user dari database berdasarkan NIP target
+        conn = sqlite3.connect('database.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT push_subscription_info FROM users WHERE nip = ?", (target_nip,))
+        result = cursor.fetchone()
+        conn.close()
+
+        if result and result['push_subscription_info']:
+            # Ubah string JSON dari database kembali menjadi dictionary
+            subscription_info = json.loads(result['push_subscription_info'])
+            
+            # Siapkan data payload notifikasi
+            payload = {
+                "title": title,
+                "body": body,
+                "url": url
+            }
+
+            # Kirim notifikasi menggunakan webpush
+            webpush(
+                subscription_info=subscription_info,
+                data=json.dumps(payload),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS.copy()
+            )
+            print(f"Push notification sent successfully to NIP: {target_nip}")
+            return True
+        else:
+            print(f"No subscription info found for NIP: {target_nip}")
+            return False
+
+    except WebPushException as ex:
+        print(f"WebPushException error for NIP {target_nip}: {ex}")
+        if ex.response and ex.response.status_code == 410:
+            print("Subscription expired or invalid. Consider removing from DB.")
+        return False
+    except Exception as e:
+        print(f"Generic error sending push notification: {e}")
+        return False

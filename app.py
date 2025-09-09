@@ -1390,14 +1390,7 @@ def send_push_notification(target_nip, title, body, url="/"):
         return False
 
 
-# ---------------------------------------------------
-# Fail-fast di production jika key belum diset
-# if (os.getenv("RAILWAY_STATIC_URL") or os.getenv("FLASK_ENV") == "production"):
-#     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
-#         raise RuntimeError("VAPID keys tidak ditemukan di environment. Set VAPID_PRIVATE_KEY & VAPID_PUBLIC_KEY.")
-
-# VAPID_PRIVATE_KEY = "0EhUSgB3dIxFDnWnh4uIZagyHSvq2eFUIV_Y55KUH74"
-# VAPID_PUBLIC_KEY = "BBiLoQsjOUL95aidqvNnPJ-W0Aer97qBRAqHQJPST1ThMK7tc9q2XeDw2yhmQALtPNkX4yhwGPpaO00fFEDbNyQ"
-# VAPID_CLAIMS = {
-#     "sub": "mailto:fendikepegppnp@gmail.com" 
-# }
+# --- Service Worker route ---
+@app.route('/service-worker.js')
+def service_worker():
+    return app.send_static_file('service-worker.js')

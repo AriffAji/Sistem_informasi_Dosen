@@ -220,7 +220,8 @@
             <h1>Dashboard Dosen</h1>
             <a href="/logout">Logout</a>
         </div>
-
+        <button id="btn-enable-push">Aktifkan Notifikasi</button>
+        <script src="{{ url_for('static', filename='js/main.js') }}"></script>
         <div class="info-box">
             <p><strong>NIP:</strong> {{ session['user_id'] }}</p>
             <p><strong>Nama:</strong> {{ session['user_name'] }}</p>
@@ -320,6 +321,12 @@
     </div>
 
 <script>
+
+     if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/service-worker.js')
+      .then(reg => console.log("Service Worker registered:", reg))
+      .catch(err => console.error("Service Worker failed:", err));
+  }
     // Ambil semua data absensi dari backend
     const allRecords = {{ records_json | tojson }};
 

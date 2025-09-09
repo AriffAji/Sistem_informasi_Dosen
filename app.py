@@ -76,8 +76,8 @@ def index():
 def login():
     error = None
 
-    # if 'user_id' in session:
-    #     return redirect(url_for('login_blocked'))
+    if 'user_id' in session:
+        return redirect(url_for('login_blocked'))
 
     # Kalau user submit form login
     if request.method == 'POST':
@@ -135,29 +135,28 @@ def login():
 
 
 # --- Rute jika user back ke halaman login ---
-# @app.route('/login-blocked')
-# def login_blocked():
-#     # pastikan user sudah login
-#     if 'user_role' not in session:
-#         return redirect(url_for('login'))
+@app.route('/login-blocked')
+def login_blocked():
+    # pastikan user sudah login
+    if 'user_role' not in session:
+        return redirect(url_for('login'))
 
-#     # mapping role ke dashboard
-#     role_redirect_map = {
-#         "Dosen": url_for('dashboard_dosen'),
-#         "Kajur": url_for('dashboard_kajur'),
-#         "Sekjur": url_for('dashboard_sekjur'),
-#         "Wadir1": url_for('dashboard_wadir1'),
-#         "Wadir2": url_for('dashboard_wadir2'),
-#         "Wadir3": url_for('dashboard_wadir3'),
-#         "Direktur": url_for('dashboard_direktur'),
-#         "Admin": url_for('dashboard_admin'),
-#     }
+    # mapping role ke dashboard
+    role_redirect_map = {
+        "Dosen": url_for('dashboard_dosen'),
+        "Kajur": url_for('dashboard_kajur'),
+        "Sekjur": url_for('dashboard_sekjur'),
+        "Wadir1": url_for('dashboard_wadir1'),
+        "Wadir2": url_for('dashboard_wadir2'),
+        "Wadir3": url_for('dashboard_wadir3'),
+        "Direktur": url_for('dashboard_direktur'),
+        "Admin": url_for('dashboard_admin'),
+    }
 
-#     role = session['user_role']
-#     dashboard_url = role_redirect_map.get(role, url_for('login'))
+    role = session['user_role']
+    dashboard_url = role_redirect_map.get(role, url_for('login'))
 
-#     return render_template('login_blocked.html', dashboard_url=dashboard_url)
-
+    return render_template('login_blocked.html', dashboard_url=dashboard_url)
 
 # Handle Back Session 
 @app.after_request
@@ -1296,11 +1295,20 @@ if __name__ == "__main__":
 # --- 1. KONFIGURASI VAPID KEYS ---
 # Letakkan ini di bagian atas app.py, di bawah baris import
 
-VAPID_PRIVATE_KEY = "0EhUSgB3dIxFDnWnh4uIZagyHSvq2eFUIV_Y55KUH74"
-VAPID_PUBLIC_KEY = "BBiLoQsjOUL95aidqvNnPJ-W0Aer97qBRAqHQJPST1ThMK7tc9q2XeDw2yhmQALtPNkX4yhwGPpaO00fFEDbNyQ"
-VAPID_CLAIMS = {
-    "sub": "mailto:fendikepegppnp@gmail.com" 
-}
+
+# --- VAPID keys (ambil dari environment) ---
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY")
+VAPID_PUBLIC_KEY  = os.getenv("VAPID_PUBLIC_KEY")
+VAPID_MAILTO      = os.getenv("VAPID_MAILTO", "admin@example.com")
+VAPID_CLAIMS = {"sub": f"mailto:{VAPID_MAILTO}"}
+
+@app.route("/vapid_public_key")
+def vapid_public_key():
+    # hanya return public key — aman untuk diakses client
+    if not VAPID_PUBLIC_KEY:
+        return jsonify({"error":"VAPID public key not configured"}), 500
+    return jsonify({"publicKey": VAPID_PUBLIC_KEY})
+
 
 # --- 2. ENDPOINT UNTUK MENERIMA DATA SUBSCRIPTION DARI BROWSER ---
 @app.route('/api/subscribe', methods=['POST'])
@@ -1380,3 +1388,16 @@ def send_push_notification(target_nip, title, body, url="/"):
     except Exception as e:
         print(f"Generic error sending push notification: {e}")
         return False
+
+
+# ---------------------------------------------------
+# Fail-fast di production jika key belum diset
+# if (os.getenv("RAILWAY_STATIC_URL") or os.getenv("FLASK_ENV") == "production"):
+#     if not VAPID_PRIVATE_KEY or not VAPID_PUBLIC_KEY:
+#         raise RuntimeError("VAPID keys tidak ditemukan di environment. Set VAPID_PRIVATE_KEY & VAPID_PUBLIC_KEY.")
+
+# VAPID_PRIVATE_KEY = "0EhUSgB3dIxFDnWnh4uIZagyHSvq2eFUIV_Y55KUH74"
+# VAPID_PUBLIC_KEY = "BBiLoQsjOUL95aidqvNnPJ-W0Aer97qBRAqHQJPST1ThMK7tc9q2XeDw2yhmQALtPNkX4yhwGPpaO00fFEDbNyQ"
+# VAPID_CLAIMS = {
+#     "sub": "mailto:fendikepegppnp@gmail.com" 
+# }

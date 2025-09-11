@@ -214,6 +214,7 @@
         {% endwith %}
 
         <form method="post" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="form-group">
                 <label for="nip_input">NIP</label>
                 <input list="nip_list" id="nip_input" name="nip" required autocomplete="off">

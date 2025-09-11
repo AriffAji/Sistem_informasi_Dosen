@@ -345,10 +345,12 @@
                     </td>
                     <td data-label="Aksi">
                         <form style="display:inline;" action="/proses_klarifikasi" method="post">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="clarification_id" value="{{ klarifikasi.id }}">
                             <button type="submit" name="action" value="setuju" class="btn btn-success">Setujui</button>
                         </form>
                         <form style="display:inline;" action="/proses_klarifikasi" method="post" onsubmit="return handleTolak(this);">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <input type="hidden" name="clarification_id" value="{{ klarifikasi.id }}">
                             <input type="hidden" name="alasan_penolakan" value="">
                             <button type="submit" name="action" value="tolak" class="btn btn-danger">Tolak</button>

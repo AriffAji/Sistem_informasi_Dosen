@@ -143,6 +143,7 @@
     <h2>Formulir Pengguna Baru</h2>
 
     <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="input-group">
         <label for="nip">NIP</label>
         <input type="text" id="nip" name="nip" required>

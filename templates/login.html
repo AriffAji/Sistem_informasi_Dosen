@@ -124,6 +124,7 @@
     <img src="https://res.cloudinary.com/dvul7dq3b/image/upload/v1755843240/logowebp_bqssky.webp" alt="Logo">
     <h2>Login SI-PPNP Dosen</h2>
     <form action="/login" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="input-group">
         <label for="nip">NIP</label>
         <input type="text" id="nip" name="nip" placeholder="Masukkan NIP" required>

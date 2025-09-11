@@ -15,7 +15,7 @@ from flask import send_file
 from pywebpush import webpush, WebPushException
 from flask_wtf import CSRFProtect
 
-csrf = CSRFProtect(app)
+
 # setup logging
 logging.basicConfig(
     level=logging.INFO,
@@ -59,7 +59,7 @@ if app.config["SESSION_TYPE"] == "redis":
     app.config["SESSION_REDIS"] = Redis.from_url(os.getenv("SESSION_REDIS"))
 
 Session(app)
-
+csrf = CSRFProtect(app)
 
 
 # --- Konfigurasi Path Database ---
